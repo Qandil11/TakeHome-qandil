@@ -37,3 +37,11 @@ We would like you to fix the app's user facing issues (both documented and undoc
 Please use version control. Import the supplied code as is to git and commit your changes through that. This will allow us to review the changes you have made.
 
 We expect you should spend no more than 3 hours on this work. We appreciate you taking the time to work on this and understand that sometimes it's not possible to spend as much time as you would like. If there are any aspects of the codebase you would have liked to work on with more time, please detail these in the ReadME file to give us some insight in to your process.
+
+## Fixes
+
+### Fixed 1: App crash due to incorrect `aliases` field type in model
+
+- Original model expected `aliases` to be `List<Int>`, but the API returns `List<String>` (e.g., ["Ned", "The Quiet Wolf"]).
+- This mismatch caused `JsonSyntaxException` and a crash on launch.
+- The field was updated to `List<String>` and documented in code to prevent future confusion.
