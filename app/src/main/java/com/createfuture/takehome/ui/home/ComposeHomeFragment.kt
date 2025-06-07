@@ -36,25 +36,79 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
-
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.TopAppBarDefaults
 
 class ComposeHomeFragment : Fragment() {
+
+    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): ComposeView = ComposeView(requireContext()).apply {
-        var retrofit = Retrofit.Builder().baseUrl("https://yj8ke8qonl.execute-api.eu-west-1.amazonaws.com").addConverterFactory(GsonConverterFactory.create(GsonBuilder().create())).client(OkHttpClient.Builder().build()).build()
+        var retrofit =
+            Retrofit.Builder().baseUrl("https://yj8ke8qonl.execute-api.eu-west-1.amazonaws.com")
+                .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
+                .client(OkHttpClient.Builder().build()).build()
         var service = retrofit.create(Service::class.java)
         var charactersBody = mutableStateOf<List<ApiCharacter>?>(null)
+        val isLoading = mutableStateOf(true)
+        val hasError =
+            mutableStateOf(false) // Qandil: add it to handle no response and crash in case of no intenet
+
         viewLifecycleOwner.lifecycleScope.launch {
-            var _characters = service.getCharacters("Bearer 754t!si@glcE2qmOFEcN")
-            charactersBody.value = _characters.body()!!
+            try {
+                val _characters = service.getCharacters("Bearer 754t!si@glcE2qmOFEcN")
+                charactersBody.value = _characters.body()
+                isLoading.value = false
+                hasError.value = charactersBody.value == null
+            } catch (e: Exception) {
+                hasError.value = true
+                charactersBody.value = emptyList() // fallback to avoid null crash
+            } finally {
+                isLoading.value = false
+            }
         }
+
+
         setContent {
+            val searchQuery = remember { mutableStateOf("") }  // Qandil 2: add search query
+            val showExitDialog = remember { mutableStateOf(false) } // Qandil : add exit dialogue
+            if (showExitDialog.value) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showExitDialog.value = false },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                requireActivity().finish() // closes the activity
+                            }
+                        ) {
+                            Text("Yes")
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = { showExitDialog.value = false }
+                        ) {
+                            Text("No")
+                        }
+                    },
+                    title = { Text("Exit App") },
+                    text = { Text("Are you sure you want to exit?") }
+                )
+            }
+
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -63,9 +117,56 @@ class ComposeHomeFragment : Fragment() {
                         painterResource(id = R.drawable.img_characters),
                         contentScale = ContentScale.FillBounds
                     )
-            ){
-                if (charactersBody.value != null) {
-                    for (character in charactersBody.value!!) {
+            ) {
+                // Qandil: add top bar
+                CenterAlignedTopAppBar(
+                    title = { Text("Game of Thrones", color = Color.White) },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color(0xFF1A1A1A) // dark background
+                    )
+                )
+                // Qandil: search bar
+                OutlinedTextField(
+                    value = searchQuery.value,
+                    onValueChange = { searchQuery.value = it },
+                    enabled = !isLoading.value, // <-- Disable during loading
+                    label = { Text("Search by name", color = Color.White) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    textStyle = LocalTextStyle.current.copy(color = Color.White),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color.LightGray
+                    )
+                )
+                if (isLoading.value) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 16.dp),
+                        color = Color.White
+                    )
+                }
+                if (hasError.value) {
+                    Text(
+                        text = "Unable to load data. Check your internet connection.",
+                        color = Color.Red,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 16.dp)
+                    )
+                }
+
+                if (charactersBody.value != null && !hasError.value) { // dont show cards, I data not fetched
+                    val filteredCharacters = charactersBody.value!!.filter {
+                        it.name.contains(searchQuery.value, ignoreCase = true)
+                    }
+
+                    for (character in filteredCharacters) {
                         Column(   // Qandil 2: character will appear in a block, more readabile text,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -104,8 +205,13 @@ class ComposeHomeFragment : Fragment() {
                                         )
                                     }
                                     Row {
-                                        Text("Born: ",  color = Color.White,
-                                            fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.alignByBaseline())
+                                        Text(
+                                            "Born: ",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 14.sp,
+                                            modifier = Modifier.alignByBaseline()
+                                        )
                                         Text(
                                             text = character.born,
                                             color = Color.White,
@@ -114,8 +220,13 @@ class ComposeHomeFragment : Fragment() {
                                         )
                                     }
                                     Row {
-                                        Text(text = "Died: ",  color = Color.White,
-                                            fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.alignByBaseline())
+                                        Text(
+                                            text = "Died: ",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 14.sp,
+                                            modifier = Modifier.alignByBaseline()
+                                        )
                                         Text(
                                             text = character.died,
                                             color = Color.White,
@@ -125,8 +236,10 @@ class ComposeHomeFragment : Fragment() {
                                     }
                                 }
                                 Column(modifier = Modifier.align(Alignment.CenterVertically)) { // Qandil 2: align seasons right
-                                    Text("Seasons: ", color = Color.White,
-                                        fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                                    Text(
+                                        "Seasons: ", color = Color.White,
+                                        fontWeight = FontWeight.Medium, fontSize = 14.sp
+                                    )
                                     val seasons =
                                         character.tvSeries.map {  // Qandil 2 : change it to map, it will remove extra commas and spaces.
                                             when (it.trim()) {
@@ -149,6 +262,9 @@ class ComposeHomeFragment : Fragment() {
                         }
                     }
                 }
+            }
+            BackHandler(enabled = true) {
+                showExitDialog.value = true
             }
         }
     }
