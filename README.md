@@ -40,8 +40,64 @@ We expect you should spend no more than 3 hours on this work. We appreciate you 
 
 ## Fixes
 
-### Fixed 1: App crash due to incorrect `aliases` field type in model
+- **Crash on Launch**  
+  Fixed a crash caused by a mismatch between the API model and the `ApiCharacter` data class. The `aliases` field was incorrectly defined as `List<Int>` instead of `List<String>`.
 
-- Original model expected `aliases` to be `List<Int>`, but the API returns `List<String>` (e.g., ["Ned", "The Quiet Wolf"]).
-- This mismatch caused `JsonSyntaxException` and a crash on launch.
-- The field was updated to `List<String>` and documented in code to prevent future confusion.
+- **UI Discrepancies**  
+  Removed unnecessary white padding and updated colors, text styles, and layout spacings to align more closely with the design mockups.
+
+---
+
+## New Features
+
+- **Search Bar**  
+  Implemented an `OutlinedTextField` that allows users to filter characters by name.
+
+- **Loading Spinner**  
+  Added a visual loading indicator when data is being fetched from the API.
+
+- **Error Handling**  
+  Displayed a user-friendly message when data fails to load (e.g., due to network issues).
+
+- **Top App Bar**  
+  Included a centered title bar to improve visual hierarchy and app structure.
+
+- **Exit Confirmation Dialog**  
+  Introduced a dialog that prompts users to confirm before closing the app using the back button.
+
+---
+
+## Code Quality Improvements
+
+- **MVVM Architecture**  
+  Refactored code into `ViewModel`, `Repository`, and `Service` layers to improve scalability and separation of concerns.
+
+- **Reactive UI with StateFlow**  
+  Used Kotlin `StateFlow` to observe and react to changes in loading, data, and error states.
+
+- **Modularization**  
+  Code is now structured into logical, testable components with clearly defined responsibilities.
+
+---
+
+## Unit Tests
+
+- `CharacterRepositoryTest`  
+  Validates that `fetchCharacters()` correctly returns data when the API responds successfully. Uses `mockk` and `runTest`.
+
+- `CharacterSearchTest`  
+  Verifies character search logic, covering:
+    - Partial and exact name matches
+    - Case-insensitive search
+    - Handling of no-match scenarios
+    - Multiple matches for a query
+
+---
+
+## What I Would Improve with More Time
+
+- Add UI tests using Espresso or Jetpack Compose Testing.
+- Use `MockWebServer` to simulate API responses for end-to-end tests.
+- Implement paging to efficiently handle larger datasets.
+
+---
