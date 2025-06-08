@@ -45,7 +45,7 @@ class CharacterRepository(private val service: CharacterService) {
                 val response = service.getCharacters(token)
                 if (response.isSuccessful) response.body() else null
             } catch (e: Exception) {
-                // Log the error in real implementation
+                // TODO: Create logs
                 null
             }
         }
